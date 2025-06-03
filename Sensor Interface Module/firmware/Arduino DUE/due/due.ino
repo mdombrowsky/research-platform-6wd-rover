@@ -89,9 +89,6 @@
 //
 
 
-/*
-
-
 class IMUNode
 {
 public:
@@ -202,8 +199,6 @@ private:
     }
 };
 
-*/
-
 
 //////////////////////////////////////////////////////////////////////////
 // Test Publisher
@@ -226,6 +221,13 @@ private:
 
 // add the parts of the mROS time_sync_example here
 
+class timesync
+{
+public:
+
+private:
+
+};
 
 //////////////////////////////////////////////////////////////////////////
 // Error-Handling
@@ -235,7 +237,9 @@ private:
 
 class error_handler
 {
+public:
 
+private:
 
 };
 
