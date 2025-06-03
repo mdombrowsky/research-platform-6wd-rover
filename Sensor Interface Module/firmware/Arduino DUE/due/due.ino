@@ -46,7 +46,7 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-// structures and data types
+// Structures and DataTypes
 //////////////////////////////////////////////////////////////////////////
 
 
@@ -68,148 +68,6 @@
 } while (0)
 
 
-
-
-//////////////////////////////////////////////////////////////////////////
-// ROS Agent Handler, Connection/Reconnection-Routine
-//////////////////////////////////////////////////////////////////////////
-
-class Int32Publisher
-{
-public:
-    Int32Publisher() : msg_{}, state_(WAITING_AGENT) {
-        instance_ = this;  // Set static instance pointer
-    }
-
-    void setup() {
-        set_microros_transports();
-        pinMode(LED_PIN, OUTPUT);
-        msg_.data = 0;
-    }
-
-    void loop() {
-        switch (state_) {
-        case WAITING_AGENT:
-            EXECUTE_EVERY_N_MS(500, {
-                state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;
-                });
-            break;
-        case AGENT_AVAILABLE:
-            state_ = create_entities() ? AGENT_CONNECTED : WAITING_AGENT;
-            if (state_ == WAITING_AGENT) {
-                destroy_entities();
-            }
-            break;
-        case AGENT_CONNECTED:
-            EXECUTE_EVERY_N_MS(200, {
-                state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
-                });
-            if (state_ == AGENT_CONNECTED) {
-                rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(100));
-            }
-            break;
-        case AGENT_DISCONNECTED:
-            destroy_entities();
-            state_ = WAITING_AGENT;
-            break;
-        }
-
-        digitalWrite(LED_PIN, (state_ == AGENT_CONNECTED) ? HIGH : LOW);
-    }
-
-private:
-    enum State {
-        WAITING_AGENT,
-        AGENT_AVAILABLE,
-        AGENT_CONNECTED,
-        AGENT_DISCONNECTED
-    };
-
-    rclc_support_t support_;
-    rcl_node_t node_;
-    rcl_timer_t timer_;
-    rclc_executor_t executor_;
-    rcl_allocator_t allocator_;
-    rcl_publisher_t publisher_;
-    std_msgs__msg__Int32 msg_;
-    State state_;
-
-    static Int32Publisher* instance_;  // Static instance pointer
-
-    static void timer_callback(rcl_timer_t* timer, int64_t last_call_time) {
-        (void)timer;
-        (void)last_call_time;
-        if (instance_) {
-            instance_->publish_message();
-        }
-    }
-
-    void publish_message() {
-        rcl_publish(&publisher_, &msg_, nullptr);
-        msg_.data++;
-    }
-
-    bool create_entities() {
-        allocator_ = rcl_get_default_allocator();
-
-        RCCHECK(rclc_support_init(&support_, 0, nullptr, &allocator_));
-        RCCHECK(rclc_node_init_default(&node_, "int32_publisher_rclcpp", "", &support_));
-        RCCHECK(rclc_publisher_init_best_effort(
-            &publisher_,
-            &node_,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-            "std_msgs_msg_Int32"));
-
-        const unsigned int timer_timeout = 1000;
-        RCCHECK(rclc_timer_init_default(
-            &timer_,
-            &support_,
-            RCL_MS_TO_NS(timer_timeout),
-            timer_callback));
-
-        executor_ = rclc_executor_get_zero_initialized_executor();
-        RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
-        RCCHECK(rclc_executor_add_timer(&executor_, &timer_));
-
-        return true;
-    }
-
-    void destroy_entities() {
-        rmw_context_t* rmw_context = rcl_context_get_rmw_context(&support_.context);
-        (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
-
-        (void)rcl_publisher_fini(&publisher_, &node_);
-        (void)rcl_timer_fini(&timer_);
-        rclc_executor_fini(&executor_);
-        (void)rcl_node_fini(&node_);
-        rclc_support_fini(&support_);
-    }
-};
-
-//////////////////////////////////////////////////////////////////////////
-// Error-Handling
-//////////////////////////////////////////////////////////////////////////
-
-// Control the LED and other events
-
-class error_handler
-{
-
-
-};
-
-//////////////////////////////////////////////////////////////////////////
-// Test Publisher
-//////////////////////////////////////////////////////////////////////////
-
-// move the Int32Publisher here and rename previous class to agent_handler
-
-
-//////////////////////////////////////////////////////////////////////////
-// Time Sync
-//////////////////////////////////////////////////////////////////////////
-
-// add the parts of the mROS time_sync_example here
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -345,6 +203,163 @@ private:
 
 */
 
+
+//////////////////////////////////////////////////////////////////////////
+// Test Publisher
+//////////////////////////////////////////////////////////////////////////
+
+// move the Int32Publisher here and rename previous class to agent_handler
+
+
+//////////////////////////////////////////////////////////////////////////
+// Time Sync
+//////////////////////////////////////////////////////////////////////////
+
+// add the parts of the mROS time_sync_example here
+
+
+//////////////////////////////////////////////////////////////////////////
+// Error-Handling
+//////////////////////////////////////////////////////////////////////////
+
+// Control the LED and other events
+
+class error_handler
+{
+
+
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+// ROS Agent Handler, Connection/Reconnection-Routine
+//////////////////////////////////////////////////////////////////////////
+
+class Int32Publisher
+{
+public:
+    Int32Publisher() : msg_{}, state_(WAITING_AGENT)
+    {
+        instance_ = this;  // Set static instance pointer
+    }
+
+    void setup()
+    {
+        set_microros_transports();
+        pinMode(LED_PIN, OUTPUT);
+        msg_.data = 0;
+    }
+
+    void loop()
+    {
+        switch (state_)
+        {
+        case WAITING_AGENT:
+            EXECUTE_EVERY_N_MS(500,
+                {
+                    state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;
+                });
+            break;
+        case AGENT_AVAILABLE:
+            state_ = create_entities() ? AGENT_CONNECTED : WAITING_AGENT;
+            if (state_ == WAITING_AGENT)
+            {
+                destroy_entities();
+            }
+            break;
+        case AGENT_CONNECTED:
+            EXECUTE_EVERY_N_MS(200,
+                {
+                    state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
+                });
+            if (state_ == AGENT_CONNECTED)
+            {
+                rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(100));
+            }
+            break;
+        case AGENT_DISCONNECTED:
+            destroy_entities();
+            state_ = WAITING_AGENT;
+            break;
+        }
+
+        digitalWrite(LED_PIN, (state_ == AGENT_CONNECTED) ? HIGH : LOW);
+    }
+
+private:
+    enum State
+    {
+        WAITING_AGENT,
+        AGENT_AVAILABLE,
+        AGENT_CONNECTED,
+        AGENT_DISCONNECTED
+    };
+
+    rclc_support_t support_;
+    rcl_node_t node_;
+    rcl_timer_t timer_;
+    rclc_executor_t executor_;
+    rcl_allocator_t allocator_;
+    rcl_publisher_t publisher_;
+    std_msgs__msg__Int32 msg_;
+    State state_;
+
+    static Int32Publisher* instance_;  // Static instance pointer
+
+    static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
+    {
+        (void)timer;
+        (void)last_call_time;
+        if (instance_)
+        {
+            instance_->publish_message();
+        }
+    }
+
+    void publish_message()
+    {
+        rcl_publish(&publisher_, &msg_, nullptr);
+        msg_.data++;
+    }
+
+    bool create_entities()
+    {
+        allocator_ = rcl_get_default_allocator();
+
+        RCCHECK(rclc_support_init(&support_, 0, nullptr, &allocator_));
+        RCCHECK(rclc_node_init_default(&node_, "int32_publisher_rclcpp", "", &support_));
+        RCCHECK(rclc_publisher_init_best_effort(
+            &publisher_,
+            &node_,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+            "std_msgs_msg_Int32"));
+
+        const unsigned int timer_timeout = 1000;
+        RCCHECK(rclc_timer_init_default(
+            &timer_,
+            &support_,
+            RCL_MS_TO_NS(timer_timeout),
+            timer_callback));
+
+        executor_ = rclc_executor_get_zero_initialized_executor();
+        RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
+        RCCHECK(rclc_executor_add_timer(&executor_, &timer_));
+
+        return true;
+    }
+
+    void destroy_entities()
+    {
+        rmw_context_t* rmw_context = rcl_context_get_rmw_context(&support_.context);
+        (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+        (void)rcl_publisher_fini(&publisher_, &node_);
+        (void)rcl_timer_fini(&timer_);
+        rclc_executor_fini(&executor_);
+        (void)rcl_node_fini(&node_);
+        rclc_support_fini(&support_);
+    }
+};
 
 
 // Initialize static member
