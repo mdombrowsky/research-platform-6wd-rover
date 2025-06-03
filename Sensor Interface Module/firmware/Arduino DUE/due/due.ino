@@ -88,6 +88,23 @@
 // GPS
 //
 
+class MotorControlNode
+{
+  public:
+
+  private:
+
+};
+
+
+class GPSNode
+{
+  public:
+
+  private:
+
+};
+
 
 class IMUNode
 {
@@ -248,10 +265,10 @@ private:
 // ROS Agent Handler, Connection/Reconnection-Routine
 //////////////////////////////////////////////////////////////////////////
 
-class Int32Publisher
+class AgentHandler
 {
 public:
-    Int32Publisher() : msg_{}, state_(WAITING_AGENT)
+    AgentHandler() : msg_{}, state_(WAITING_AGENT)
     {
         instance_ = this;  // Set static instance pointer
     }
@@ -317,7 +334,7 @@ private:
     std_msgs__msg__Int32 msg_;
     State state_;
 
-    static Int32Publisher* instance_;  // Static instance pointer
+    static AgentHandler* instance_;  // Static instance pointer
 
     static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
     {
@@ -376,8 +393,8 @@ private:
 
 
 // Initialize static member
-Int32Publisher* Int32Publisher::instance_ = nullptr;
-Int32Publisher publisher_node;
+AgentHandler* AgentHandler::instance_ = nullptr;
+AgentHandler publisher_node;
 
 
 
