@@ -4,17 +4,12 @@
 //designer:     Michael Dombrowsky
 //created on:   06/02/2025
 //last modification:  06/07/2020
-//version:      0.0.1
-//description:    test project to learn
+//version:      0.0.9
+//description:
 //notes:
 //ide:        AVR Studio 6.1.2730 SP2
 //compiler      AVR Toolchain 4.8.4.371, gcc 4.8.4
-//cpu config:
-//////////////////////////////////////////////////////////////////////////
-
-
-//////////////////////////////////////////////////////////////////////////
-// still to do
+//cpu config:   Atmel SAM3X8E (ARM Cortex-M3)
 //////////////////////////////////////////////////////////////////////////
 
 
@@ -23,12 +18,14 @@
 //////////////////////////////////////////////////////////////////////////
 
 // Basic Header
+#include <stdio.h>
 
 // Atmel, AVR
 
 // Arduino
 // remove all headers in here when arduino routines are replaced with avr
 #include <Wire.h>
+//#include <TimeLib.h>
 
 // FreeRTOS
 //#include <FreeRTOS.h>
@@ -44,6 +41,7 @@
 #include <rclc/executor.h>
 #include <rmw_microros/rmw_microros.h>
 
+#include <std_msgs/msg/string.h>
 #include <std_msgs/msg/int32.h>
 #include <sensor_msgs/msg/imu.h>
 //#include <std_msgs/msg/int32_multi_array.h>
@@ -58,7 +56,6 @@
 // hardware config
 //////////////////////////////////////////////////////////////////////////
 
-// Arduino DUE, cortex-m3
 // IMU, I2C-Address for MPU6050: 0x68
 
 //////////////////////////////////////////////////////////////////////////
@@ -242,19 +239,92 @@ private:
 
 
 //////////////////////////////////////////////////////////////////////////
-// Test Publisher (Int32Counter)
+// Test Publisher (Int32Publisher )
 //////////////////////////////////////////////////////////////////////////
 
 // move the Int32Publisher here and rename previous class to agent_handler
 
-class test_Int32Publisher
+
+//////////////////////////////////////////////////////////////////////////
+// Test Publisher (MinimalPublisher )
+//////////////////////////////////////////////////////////////////////////
+
+class MinimalPublisher
 {
 public:
+    MinimalPublisher() : count_(0), state_(UNINITIALIZED)
+    {
+        instance_ = this;
+    }
+
+    bool setup(rclc_support_t* support, rcl_node_t* node, rcl_allocator_t* allocator)
+    {
+        allocator_ = allocator;
+
+        // Init publisher
+        RCCHECK(rclc_publisher_init_best_effort(
+            &publisher_,
+            node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+            "topic"));
+
+        // Init timer (every 500ms)
+        RCCHECK(rclc_timer_init_default(
+            &timer_,
+            support,
+            RCL_MS_TO_NS(500),
+            timer_callback));
+
+        state_ = INITIALIZED;
+        return true;
+    }
+
+    rcl_timer_t* get_timer()
+    {
+        return (state_ == INITIALIZED) ? &timer_ : nullptr;
+    }
 
 private:
+    enum State
+    {
+        UNINITIALIZED,
+        INITIALIZED
+    };
 
+    static MinimalPublisher* instance_;
+
+    rcl_publisher_t publisher_;
+    rcl_timer_t timer_;
+    rcl_allocator_t* allocator_;
+    State state_;
+    int count_;
+
+    static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
+    {
+        (void)timer;
+        (void)last_call_time;
+        if (instance_)
+        {
+            instance_->publish();
+        }
+    }
+
+    void publish()
+    {
+        if (state_ != INITIALIZED) return;
+
+        char buf[64];
+        snprintf(buf, sizeof(buf), "Hello from uROS MinimalPublisher %d", count_++);
+
+        std_msgs__msg__String msg;
+        std_msgs__msg__String__init(&msg);
+        msg.data.data = buf;
+        msg.data.size = strlen(buf);
+        msg.data.capacity = sizeof(buf);
+
+        rcl_publish(&publisher_, &msg, nullptr);
+    }
 };
-
 
 //////////////////////////////////////////////////////////////////////////
 // Custom Memory Allocator
@@ -274,13 +344,85 @@ private:
 
 // add the parts of the mROS time_sync_example here
 
-class timesync
+
+/*
+class TimeSync
 {
 public:
+    TimeSync(int timeout_ms = 1000)
+        : timeout_ms_(timeout_ms), time_ms_(0), time_seconds_(0)
+    {
+        memset(time_str_, 0, sizeof(time_str_));
+    }
+
+    void begin()
+    {
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);
+    HWSERIAL.begin(115200);
+    delay(2000);
+
+    allocator_ = rcl_get_default_allocator();
+    RCCHECK(rclc_support_init(&support_, 0, NULL, &allocator_));
+  }
+
+  void update()
+  {
+    if (rmw_uros_sync_session(timeout_ms_) == RCL_RET_OK)
+    {
+      time_ms_ = rmw_uros_epoch_millis();
+
+      if (time_ms_ > 0)
+      {
+        time_seconds_ = time_ms_ / 1000;
+        setTime(time_seconds_);
+        sprintf(time_str_, "%02d.%02d.%04d %02d:%02d:%02d.%03d",
+        day(), month(), year(), hour(), minute(), second(), (uint)time_ms_ % 1000);
+
+        HWSERIAL.print("Agent date: ");
+        HWSERIAL.println(time_str_);
+      }
+      else
+      {
+        HWSERIAL.print("Session sync failed, error code: ");
+        HWSERIAL.println((int)time_ms_);
+      }
+    }
+    else
+    {
+      HWSERIAL.println("Sync session failed.");
+    }
+  }
+
+  const char* getFormattedTime() const
+  {
+    return time_str_;
+  }
+
+  int64_t getEpochMillis() const
+  {
+    return time_ms_;
+    }
 
 private:
+    int timeout_ms_;
+  int64_t time_ms_;
+  time_t time_seconds_;
+  char time_str_[25];
 
+  rclc_support_t support_;
+  rcl_allocator_t allocator_;
+
+  void error_loop()
+  {
+    while (1)
+    {
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+      delay(100);
+    }
+  }
 };
+*/
 
 //////////////////////////////////////////////////////////////////////////
 // Error-Handling
@@ -304,9 +446,17 @@ private:
 class AgentHandler
 {
 public:
+
+    // Constructor
     AgentHandler() : msg_{}, state_(WAITING_AGENT)
     {
         instance_ = this;  // Set static instance pointer
+    }
+
+    // Destructor
+    ~AgentHandler()
+    {
+        destroy_entities();
     }
 
     void setup()
@@ -340,6 +490,7 @@ public:
                 });
             if (state_ == AGENT_CONNECTED)
             {
+                // spin nodes here
                 rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(100));
             }
             break;
@@ -425,6 +576,7 @@ private:
         (void)rcl_node_fini(&node_);
         rclc_support_fini(&support_);
     }
+
 };
 
 
@@ -436,15 +588,35 @@ private:
 AgentHandler* AgentHandler::instance_ = nullptr;
 AgentHandler publisher_node;
 
+MinimalPublisher minimal_pub;
+MinimalPublisher* MinimalPublisher::instance_ = nullptr;
+
 
 //////////////////////////////////////////////////////////////////////////
 // MAIN
 //////////////////////////////////////////////////////////////////////////
 
-void setup() {
+// Arduino-Style Implementation
+
+void setup()
+{
     publisher_node.setup();
 }
 
-void loop() {
+void loop()
+{
     publisher_node.loop();
 }
+
+
+/*
+int main()
+{
+    setup();
+
+    while(1)
+    {
+        loop();
+    }
+}
+*/
