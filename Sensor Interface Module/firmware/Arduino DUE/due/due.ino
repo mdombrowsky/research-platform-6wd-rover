@@ -65,6 +65,8 @@
 #include <sensor_msgs/msg/imu.h>
 //#include <std_msgs/msg/int32_multi_array.h>
 #include <rcutils/logging_macros.h>
+#include "rosidl_runtime_c/string_functions.h"
+#include "rcl_interfaces/msg/log.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -110,7 +112,13 @@
 } while (0)
 
 
-
+#ifndef RCL_LOG_SEVERITY_INFO
+#define RCL_LOG_SEVERITY_DEBUG 10
+#define RCL_LOG_SEVERITY_INFO 20
+#define RCL_LOG_SEVERITY_WARN 30
+#define RCL_LOG_SEVERITY_ERROR 40
+#define RCL_LOG_SEVERITY_FATAL 50
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // ROS Nodes, Publisher and Subscribers
@@ -484,9 +492,6 @@ public:
         set_microros_transports();
         pinMode(LED_PIN, OUTPUT);
         msg_.data = 0;
-
-        // Set verbosity to INFO for all loggers
-        //rcutils_logging_set_logger_level(RCUTILS_DEFAULT_LOGGER_NAME, RCUTILS_LOG_SEVERITY_INFO);
     }
 
     void loop()
@@ -544,6 +549,12 @@ private:
     std_msgs__msg__Int32 msg_;
     State state_;
 
+    rcl_publisher_t log_publisher_;
+    std_msgs__msg__String log_msg_;
+
+    rcl_publisher_t rosout_publisher_;
+    rcl_interfaces__msg__Log rosout_msg_;
+
     static AgentHandler* instance_;  // Static instance pointer
 
     static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
@@ -558,11 +569,11 @@ private:
 
     void publish_message()
     {
-        //log
-        RCUTILS_LOG_INFO("Publishing message with data: %d", msg_.data);
-
         rcl_publish(&publisher_, &msg_, nullptr);
         msg_.data++;
+
+        publish_log("Test log message number %d", msg_.data);
+
     }
 
     bool create_entities()
@@ -588,6 +599,36 @@ private:
         RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
         RCCHECK(rclc_executor_add_timer(&executor_, &timer_));
 
+        /*
+        RCCHECK(rclc_publisher_init_best_effort(
+            &rosout_publisher_,
+            &node_,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(rcl_interfaces, msg, Log),
+            "/rosout"));
+        */
+
+        rcl_publisher_options_t pub_ops = rcl_publisher_get_default_options();
+        pub_ops.qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+        pub_ops.qos.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+
+        rcl_ret_t ret = rcl_publisher_init(
+            &log_publisher_,
+            &node_,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(rcl_interfaces, msg, Log),
+            "/rosout",
+            &pub_ops);
+        if (ret != RCL_RET_OK) {
+            // handle error
+        }
+
+
+        rosout_msg_.name.data = nullptr;
+        rosout_msg_.msg.data = nullptr;
+        rosout_msg_.file.data = nullptr;
+        rosout_msg_.function.data = nullptr;
+        rosout_msg_.line = 0;
+        rosout_msg_.level = RCL_LOG_SEVERITY_INFO; // example
+
         return true;
     }
 
@@ -601,8 +642,29 @@ private:
         rclc_executor_fini(&executor_);
         (void)rcl_node_fini(&node_);
         rclc_support_fini(&support_);
+
+        (void)rcl_publisher_fini(&rosout_publisher_, &node_);
+
     }
 
+    void publish_log(const char* format, ...)
+    {
+        char buffer[128];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+
+        // Assign strings - use rosidl_runtime_c__String__assign to manage memory properly
+        rosidl_runtime_c__String__assign(&rosout_msg_.name, "AgentHandler");
+        rosidl_runtime_c__String__assign(&rosout_msg_.msg, buffer);
+        rosidl_runtime_c__String__assign(&rosout_msg_.file, __FILE__);
+        rosidl_runtime_c__String__assign(&rosout_msg_.function, __func__);
+        rosout_msg_.line = __LINE__;
+        rosout_msg_.level = RCL_LOG_SEVERITY_INFO; // or other severity
+
+        rcl_publish(&rosout_publisher_, &rosout_msg_, nullptr);
+    }
 };
 
 
