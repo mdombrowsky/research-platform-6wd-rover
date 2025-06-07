@@ -25,6 +25,7 @@
 // Arduino
 // remove all headers in here when arduino routines are replaced with avr
 #include <Wire.h>
+//#include <Arduino_FreeRTOS.h> //not working
 //#include <TimeLib.h>
 
 // FreeRTOS
@@ -32,6 +33,24 @@
 //#include <task.h>
 //#include <timers.h>
 //#include <semphr.h>
+
+/*
+// currently unused
+#include <list.h>
+#include <stack_macros.h>
+#include <mpu_prototypes.h>
+#include <deprecated_definitions.h>
+#include <queue.h>
+#include <mpu_wrappers.h>
+#include <FreeRTOSConfig.h>
+#include <stream_buffer.h>
+#include <message_buffer.h>
+#include <croutine.h>
+#include <event_groups.h>
+#include <portmacro.h>
+#include <projdefs.h>
+#include <portable.h>
+*/
 
 // MicroROS
 #include <micro_ros_arduino.h>
@@ -45,6 +64,7 @@
 #include <std_msgs/msg/int32.h>
 #include <sensor_msgs/msg/imu.h>
 //#include <std_msgs/msg/int32_multi_array.h>
+#include <rcutils/logging_macros.h>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -464,6 +484,9 @@ public:
         set_microros_transports();
         pinMode(LED_PIN, OUTPUT);
         msg_.data = 0;
+
+        // Set verbosity to INFO for all loggers
+        //rcutils_logging_set_logger_level(RCUTILS_DEFAULT_LOGGER_NAME, RCUTILS_LOG_SEVERITY_INFO);
     }
 
     void loop()
@@ -535,6 +558,9 @@ private:
 
     void publish_message()
     {
+        //log
+        RCUTILS_LOG_INFO("Publishing message with data: %d", msg_.data);
+
         rcl_publish(&publisher_, &msg_, nullptr);
         msg_.data++;
     }
@@ -588,8 +614,8 @@ private:
 AgentHandler* AgentHandler::instance_ = nullptr;
 AgentHandler publisher_node;
 
-MinimalPublisher minimal_pub;
 MinimalPublisher* MinimalPublisher::instance_ = nullptr;
+MinimalPublisher minimal_pub;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -608,6 +634,27 @@ void loop()
     publisher_node.loop();
 }
 
+/*
+xTaskCreate(
+    TaskBlink,       // task function
+    "Blink",         // name
+    128,             // stack size
+    NULL,            // parameters
+    2,               // priority higher
+    &TaskBlink_Handler
+);
+*/
+
+/*
+xTaskCreate(
+    TaskSerial,
+    "Serial",
+    128,
+    NULL,
+    1,               // priority lower
+    &TaskSerial_Handler
+);
+*/
 
 /*
 int main()
