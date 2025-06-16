@@ -29,10 +29,10 @@
 //#include <TimeLib.h>
 
 // FreeRTOS
-//#include <FreeRTOS.h>
-//#include <task.h>
-//#include <timers.h>
-//#include <semphr.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <timers.h>
+#include <semphr.h>
 
 /*
 // currently unused
@@ -552,7 +552,7 @@ private:
     rcl_publisher_t log_publisher_;
     std_msgs__msg__String log_msg_;
 
-    //rcl_publisher_t rosout_publisher_;
+    rcl_publisher_t rosout_publisher_;
     rcl_interfaces__msg__Log rosout_msg_;
 
     static AgentHandler* instance_;  // Static instance pointer
@@ -571,9 +571,6 @@ private:
     {
         rcl_publish(&publisher_, &msg_, nullptr);
         msg_.data++;
-
-        publish_log("Test log message number %d", msg_.data);
-
     }
 
     bool create_entities()
@@ -643,8 +640,7 @@ private:
         (void)rcl_node_fini(&node_);
         rclc_support_fini(&support_);
 
-        //(void)rcl_publisher_fini(&rosout_publisher_, &node_);
-        (void)rcl_publisher_fini(&log_publisher_, &node_);
+        (void)rcl_publisher_fini(&rosout_publisher_, &node_);
 
     }
 
@@ -664,9 +660,7 @@ private:
         rosout_msg_.line = __LINE__;
         rosout_msg_.level = RCL_LOG_SEVERITY_INFO; // or other severity
 
-        //rcl_publish(&rosout_publisher_, &rosout_msg_, nullptr);
-        rcl_publish(&log_publisher_, &rosout_msg_, nullptr);
-
+        rcl_publish(&rosout_publisher_, &rosout_msg_, nullptr);
     }
 };
 
