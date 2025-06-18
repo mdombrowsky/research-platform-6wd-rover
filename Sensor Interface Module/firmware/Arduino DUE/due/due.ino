@@ -112,6 +112,8 @@
 } while (0)
 
 
+
+// prios for rosout messages
 #ifndef RCL_LOG_SEVERITY_INFO
 #define RCL_LOG_SEVERITY_DEBUG 10
 #define RCL_LOG_SEVERITY_INFO 20
@@ -137,133 +139,7 @@
 // GPS
 //
 
-class MotorControlNode
-{
-  public:
 
-  private:
-
-};
-
-
-class GPSNode
-{
-  public:
-
-  private:
-
-};
-
-
-class IMUNode
-{
-public:
-    IMUNode() : state_(UNINITIALIZED)
-    {
-        instance_ = this;
-    }
-
-    void setup()
-    {
-        Wire.begin();
-        pinMode(LED_PIN, OUTPUT);
-        setup_imu();
-    }
-
-    bool create_entities(rclc_support_t* support, rcl_node_t* node, rcl_allocator_t* allocator)
-    {
-        // Initialize publisher
-        RCCHECK(rclc_publisher_init_best_effort(
-            &publisher_,
-            node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            "imu_raw"));
-
-        // Timer
-        const unsigned int timer_timeout = 100; // 10 Hz
-        RCCHECK(rclc_timer_init_default(
-            &timer_,
-            support,
-            RCL_MS_TO_NS(timer_timeout),
-            timer_callback));
-
-        return true;
-    }
-
-    rcl_timer_t* get_timer()
-    {
-        return &timer_;
-    }
-
-private:
-    enum State
-    {
-        UNINITIALIZED,
-        INITIALIZED
-    };
-
-    static IMUNode* instance_;
-
-    rcl_publisher_t publisher_;
-    rcl_timer_t timer_;
-    State state_;
-
-    static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
-    {
-        (void)timer;
-        (void)last_call_time;
-        if (instance_) {
-            instance_->publish_imu();
-        }
-    }
-
-    void setup_imu()
-    {
-        Wire.beginTransmission(0x68);
-        Wire.write(0x6B);  // PWR_MGMT_1 register
-        Wire.write(0);     // Set to zero (wakes up MPU-6050)
-        Wire.endTransmission(true);
-        state_ = INITIALIZED;
-    }
-
-    void read_raw_data(int16_t& ax, int16_t& ay, int16_t& az, int16_t& gx, int16_t& gy, int16_t& gz)
-    {
-        Wire.beginTransmission(0x68);
-        Wire.write(0x3B); // Starting register for accelerometer
-        Wire.endTransmission(false);
-        Wire.requestFrom(0x68, 14, true);
-
-        ax = Wire.read() << 8 | Wire.read();
-        ay = Wire.read() << 8 | Wire.read();
-        az = Wire.read() << 8 | Wire.read();
-        Wire.read(); Wire.read(); // Skip Temp
-        gx = Wire.read() << 8 | Wire.read();
-        gy = Wire.read() << 8 | Wire.read();
-        gz = Wire.read() << 8 | Wire.read();
-    }
-
-    void publish_imu()
-    {
-        if (state_ != INITIALIZED) return;
-
-        int16_t ax, ay, az, gx, gy, gz;
-        read_raw_data(ax, ay, az, gx, gy, gz);
-
-        sensor_msgs__msg__Imu msg;
-        memset(&msg, 0, sizeof(msg)); // clear unused fields
-
-        // Convert to SI units if needed (optional)
-        msg.linear_acceleration.x = ax / 16384.0;  // assuming ±2g
-        msg.linear_acceleration.y = ay / 16384.0;
-        msg.linear_acceleration.z = az / 16384.0;
-
-        msg.angular_velocity.x = gx / 131.0; // assuming ±250 deg/s
-        msg.angular_velocity.y = gy / 131.0;
-        msg.angular_velocity.z = gz / 131.0;
-
-        rcl_publish(&publisher_, &msg, nullptr);
-    }
-};
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -373,85 +249,6 @@ private:
 // add the parts of the mROS time_sync_example here
 
 
-/*
-class TimeSync
-{
-public:
-    TimeSync(int timeout_ms = 1000)
-        : timeout_ms_(timeout_ms), time_ms_(0), time_seconds_(0)
-    {
-        memset(time_str_, 0, sizeof(time_str_));
-    }
-
-    void begin()
-    {
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);
-    HWSERIAL.begin(115200);
-    delay(2000);
-
-    allocator_ = rcl_get_default_allocator();
-    RCCHECK(rclc_support_init(&support_, 0, NULL, &allocator_));
-  }
-
-  void update()
-  {
-    if (rmw_uros_sync_session(timeout_ms_) == RCL_RET_OK)
-    {
-      time_ms_ = rmw_uros_epoch_millis();
-
-      if (time_ms_ > 0)
-      {
-        time_seconds_ = time_ms_ / 1000;
-        setTime(time_seconds_);
-        sprintf(time_str_, "%02d.%02d.%04d %02d:%02d:%02d.%03d",
-        day(), month(), year(), hour(), minute(), second(), (uint)time_ms_ % 1000);
-
-        HWSERIAL.print("Agent date: ");
-        HWSERIAL.println(time_str_);
-      }
-      else
-      {
-        HWSERIAL.print("Session sync failed, error code: ");
-        HWSERIAL.println((int)time_ms_);
-      }
-    }
-    else
-    {
-      HWSERIAL.println("Sync session failed.");
-    }
-  }
-
-  const char* getFormattedTime() const
-  {
-    return time_str_;
-  }
-
-  int64_t getEpochMillis() const
-  {
-    return time_ms_;
-    }
-
-private:
-    int timeout_ms_;
-  int64_t time_ms_;
-  time_t time_seconds_;
-  char time_str_[25];
-
-  rclc_support_t support_;
-  rcl_allocator_t allocator_;
-
-  void error_loop()
-  {
-    while (1)
-    {
-      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-      delay(100);
-    }
-  }
-};
-*/
-
 //////////////////////////////////////////////////////////////////////////
 // Error-Handling
 //////////////////////////////////////////////////////////////////////////
@@ -552,7 +349,6 @@ private:
     rcl_publisher_t log_publisher_;
     std_msgs__msg__String log_msg_;
 
-    rcl_publisher_t rosout_publisher_;
     rcl_interfaces__msg__Log rosout_msg_;
 
     static AgentHandler* instance_;  // Static instance pointer
@@ -571,6 +367,27 @@ private:
     {
         rcl_publish(&publisher_, &msg_, nullptr);
         msg_.data++;
+
+        publish_log("Test log message number %d", msg_.data);
+    }
+
+    void publish_log(const char* format, ...)
+    {
+        char buffer[128];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+
+        // Assign strings - use rosidl_runtime_c__String__assign to manage memory properly
+        rosidl_runtime_c__String__assign(&rosout_msg_.name, "AgentHandler");
+        rosidl_runtime_c__String__assign(&rosout_msg_.msg, buffer);
+        rosidl_runtime_c__String__assign(&rosout_msg_.file, __FILE__);
+        rosidl_runtime_c__String__assign(&rosout_msg_.function, __func__);
+        rosout_msg_.line = __LINE__;
+        rosout_msg_.level = RCL_LOG_SEVERITY_INFO; // or other severity
+
+        rcl_publish(&log_publisher_, &rosout_msg_, nullptr);
     }
 
     bool create_entities()
@@ -578,7 +395,7 @@ private:
         allocator_ = rcl_get_default_allocator();
 
         RCCHECK(rclc_support_init(&support_, 0, nullptr, &allocator_));
-        RCCHECK(rclc_node_init_default(&node_, "int32_publisher_rclcpp", "", &support_));
+        RCCHECK(rclc_node_init_default(&node_, "uROS_Agent", "", &support_));       //node name
         RCCHECK(rclc_publisher_init_best_effort(
             &publisher_,
             &node_,
@@ -596,29 +413,20 @@ private:
         RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
         RCCHECK(rclc_executor_add_timer(&executor_, &timer_));
 
-        /*
-        RCCHECK(rclc_publisher_init_best_effort(
-            &rosout_publisher_,
-            &node_,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(rcl_interfaces, msg, Log),
-            "/rosout"));
-        */
-
+        //for log-publisher
         rcl_publisher_options_t pub_ops = rcl_publisher_get_default_options();
         pub_ops.qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
         pub_ops.qos.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-
         rcl_ret_t ret = rcl_publisher_init(
             &log_publisher_,
             &node_,
             ROSIDL_GET_MSG_TYPE_SUPPORT(rcl_interfaces, msg, Log),
             "/rosout",
             &pub_ops);
-        if (ret != RCL_RET_OK) {
+        if (ret != RCL_RET_OK)
+        {
             // handle error
         }
-
-
         rosout_msg_.name.data = nullptr;
         rosout_msg_.msg.data = nullptr;
         rosout_msg_.file.data = nullptr;
@@ -640,28 +448,10 @@ private:
         (void)rcl_node_fini(&node_);
         rclc_support_fini(&support_);
 
-        (void)rcl_publisher_fini(&rosout_publisher_, &node_);
-
+        (void)rcl_publisher_fini(&log_publisher_, &node_);
     }
 
-    void publish_log(const char* format, ...)
-    {
-        char buffer[128];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(buffer, sizeof(buffer), format, args);
-        va_end(args);
 
-        // Assign strings - use rosidl_runtime_c__String__assign to manage memory properly
-        rosidl_runtime_c__String__assign(&rosout_msg_.name, "AgentHandler");
-        rosidl_runtime_c__String__assign(&rosout_msg_.msg, buffer);
-        rosidl_runtime_c__String__assign(&rosout_msg_.file, __FILE__);
-        rosidl_runtime_c__String__assign(&rosout_msg_.function, __func__);
-        rosout_msg_.line = __LINE__;
-        rosout_msg_.level = RCL_LOG_SEVERITY_INFO; // or other severity
-
-        rcl_publish(&rosout_publisher_, &rosout_msg_, nullptr);
-    }
 };
 
 
@@ -686,6 +476,11 @@ MinimalPublisher minimal_pub;
 void setup()
 {
     publisher_node.setup();
+
+
+
+
+
 }
 
 void loop()
