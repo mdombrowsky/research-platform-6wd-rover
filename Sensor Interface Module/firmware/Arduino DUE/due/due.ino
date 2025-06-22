@@ -29,10 +29,10 @@
 //#include <TimeLib.h>
 
 // FreeRTOS
-#include <FreeRTOS.h>
-#include <task.h>
-#include <timers.h>
-#include <semphr.h>
+//#include <FreeRTOS.h>
+//#include <task.h>
+//#include <timers.h>
+//#include <semphr.h>
 
 /*
 // currently unused
@@ -367,6 +367,7 @@ public:
     {
         set_microros_transports();
         pinMode(LED_PIN, OUTPUT);
+
     }
 
     void loop()
@@ -385,18 +386,25 @@ public:
             break;
 
         case AGENT_CONNECTED:
-            EXECUTE_EVERY_N_MS(200, {
-                state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
+            EXECUTE_EVERY_N_MS(200,
+                {
+                    state_ = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
                 });
 
-            if (state_ == AGENT_CONNECTED) {
+            if (state_ == AGENT_CONNECTED)
+            {
                 rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(100));
+                if (!connected_logged_) {
+                    logger_->log(__FILE__, __func__, __LINE__, RCL_LOG_SEVERITY_INFO, "uROS Agent connected");
+                    connected_logged_ = true;
+                }
             }
             break;
 
         case AGENT_DISCONNECTED:
             destroy_entities();
             state_ = WAITING_AGENT;
+            connected_logged_ = false;
             break;
         }
 
@@ -411,6 +419,7 @@ private:
     rclc_executor_t executor_;
     rcl_allocator_t allocator_;
     rcl_timer_t timer_;
+    bool connected_logged_ = false;
 
     MinimalPublisher* publisher_;
     LogPublisher* logger_;
@@ -433,7 +442,7 @@ private:
         allocator_ = rcl_get_default_allocator();
 
         RCCHECK(rclc_support_init(&support_, 0, nullptr, &allocator_));
-        RCCHECK(rclc_node_init_default(&node_, "uros_node", "", &support_));
+        RCCHECK(rclc_node_init_default(&node_, "uROS_Agent", "", &support_));
 
         if (!publisher_->setup(&support_, &node_, &allocator_)) return false;
         if (!logger_->setup(&node_)) return false;
