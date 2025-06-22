@@ -24,7 +24,7 @@
 
 // Arduino
 // remove all headers in here when arduino routines are replaced with avr
-#include <Wire.h>
+//#include <Wire.h>
 //#include <Arduino_FreeRTOS.h> //not working
 //#include <TimeLib.h>
 
@@ -168,7 +168,10 @@ public:
         if (state_ != INITIALIZED) return;
     std_msgs__msg__Int32 msg;
     msg.data = count_++;
-    rcl_publish(&publisher_, &msg, nullptr);
+        rcl_ret_t rc = rcl_publish(&publisher_, &msg, nullptr);
+        if (rc != RCL_RET_OK) {
+            // Optional: handle or log error
+        }
   }
 
 private:
@@ -256,7 +259,10 @@ private:
         msg.data.size = strlen(buf);
         msg.data.capacity = sizeof(buf);
 
-        rcl_publish(&publisher_, &msg, nullptr);
+        rcl_ret_t rc = rcl_publish(&publisher_, &msg, nullptr);
+        if (rc != RCL_RET_OK) {
+            // Optional: handle or log error
+        }
     }
 };
 
@@ -299,7 +305,10 @@ class LogPublisher
     msg_.line = line;
     msg_.level = level;
 
-    rcl_publish(&publisher_, &msg_, nullptr);
+        rcl_ret_t rc = rcl_publish(&publisher_, &msg_, nullptr);
+        if (rc != RCL_RET_OK) {
+            // Optional: log locally or indicate error
+        }
   }
 
   private:
@@ -440,8 +449,19 @@ private:
     void destroy_entities()
     {
         rclc_executor_fini(&executor_);
-        rcl_timer_fini(&timer_);
-        rcl_node_fini(&node_);
+
+        rcl_ret_t rc;
+
+        rc = rcl_timer_fini(&timer_);
+        if (rc != RCL_RET_OK) {
+            // Handle error if needed
+        }
+
+        rc = rcl_node_fini(&node_);
+        if (rc != RCL_RET_OK) {
+            // Handle error if needed
+        }
+
         rclc_support_fini(&support_);
     }
 
