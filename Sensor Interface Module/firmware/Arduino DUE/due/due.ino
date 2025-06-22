@@ -425,18 +425,20 @@ private:
     LogPublisher* logger_;
 
     static AgentHandler* instance_;
-
+    /*
     static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
     {
         if (instance_) instance_->on_timer();
     }
+    */
 
+    /*
     void on_timer()
     {
         // This would now delegate to external publisher logic
         logger_->log(__FILE__, __func__, __LINE__, RCL_LOG_SEVERITY_INFO, "Agent is alive");
     }
-
+    */
     bool create_entities()
     {
         allocator_ = rcl_get_default_allocator();
@@ -449,7 +451,7 @@ private:
 
         executor_ = rclc_executor_get_zero_initialized_executor();
         RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
-        RCCHECK(rclc_timer_init_default(&timer_, &support_, RCL_MS_TO_NS(1000), timer_callback));
+        //RCCHECK(rclc_timer_init_default(&timer_, &support_, RCL_MS_TO_NS(1000), timer_callback));
         RCCHECK(rclc_executor_add_timer(&executor_, &timer_));
 
         return true;
