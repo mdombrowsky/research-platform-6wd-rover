@@ -159,7 +159,7 @@ public:
     RCCHECK(rclc_publisher_init_best_effort(
     &publisher_, node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "std_msgs_msg_Int32"));
+    "Int32Publisher"));
     return (state_ = INITIALIZED), true;
   }
 
@@ -200,7 +200,7 @@ public:
             &publisher_,
             node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
-            "topic"));
+            "MinimalPublisher"));
 
         // Init timer (every 500ms)
         RCCHECK(rclc_timer_init_default(
@@ -444,6 +444,13 @@ private:
         rcl_node_fini(&node_);
         rclc_support_fini(&support_);
     }
+
+    void spin_nodes()
+    {
+
+
+    }
+
 };
 
 
@@ -466,16 +473,6 @@ void xxx()
 //////////////////////////////////////////////////////////////////////////
 // Global Scope Definitions
 //////////////////////////////////////////////////////////////////////////
-
-// Initialize static member
-//AgentHandler* AgentHandler::instance_ = nullptr;
-//AgentHandler publisher_node;
-
-// Static instance definition
-//AgentHandler* AgentHandler::instance_ = nullptr;
-
-//MinimalPublisher* MinimalPublisher::instance_ = nullptr;
-//MinimalPublisher minimal_pub;
 
 // Static member initializations
 MinimalPublisher* MinimalPublisher::instance_ = nullptr;
