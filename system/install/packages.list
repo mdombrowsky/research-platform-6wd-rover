@@ -1,0 +1,40 @@
+packages.list
+
+# Production packages
+PROD_PACKAGES=(
+    vim
+    "docker.io=20.10.24+dfsg1-1+b3"
+    "docker-compose=1.29.2-3"
+    #docker-compose-plugin
+    "python3-docker=5.0.3-1"
+    "python3-dockerpty=0.4.1-4"
+)
+
+# Development packages (includes production)
+DEV_PACKAGES=(
+    "${PROD_PACKAGES[@]}"
+    # general packages
+    python3-pip
+    python3-venv
+    usbutils
+    iputils-ping
+    ca-certificates
+    curl
+    wget
+    i2c-tools
+
+    # system
+    iproute2
+    ssh
+    xfsprogs
+
+    # tools
+    emacs
+    git
+    mc
+
+    # dev tools
+    build-essential
+    cmake
+    ccache    
+)
