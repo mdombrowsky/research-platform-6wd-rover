@@ -1,0 +1,71 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+
+# =================================
+# Development Container
+# =================================
+# To build and run:
+#docker compose up -d development-test
+#docker exec -it live-development-environment bash
+#
+  development-test:
+    platform: linux/arm64
+    build:
+      context: ..
+      dockerfile: docker/development/Dockerfile
+#      target: development-environment
+    container_name: live-development-environment
+    ipc: host
+    network_mode: host
+#    ports:
+#      - "7400-7500:7400-7500"
+#    networks:
+#      - ros-backend
+#       ros-backend: {}
+#       ros-public:
+#         ipv4_address: 192.168.201.116
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb  # full USB passthrough
+      - /dev/ttyACM0:/dev/ttyACM0
+      - /dev/ttyACM1:/dev/ttyACM1
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+#       dont do this!
+#      - "/dev/serial/by-id/usb-Arduino_LLC_Arduino_Due_...:/dev/ttyACM0"
+    volumes:
+ #     - ../workspace:/workspace
+      - /mnt/repo/system/workspace:/workspace:cached
+    restart: unless-stopped
+    environment:
+      - ROS_DISTRO=humble
+    tty: true
+
+
+# volumes for mapping data,config and log
+#volumes:
+#  config:
+#  data:
+#  log:
+
+
+networks:
+  default:
+    external:
+      name: host
+  ros-backend:
+    driver: bridge
+  ros-public:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+#      parent: wlan0
+    ipam:
+      config:
+        - subnet: "192.168.201.0/24"
+          gateway: "192.168.201.254"
+          ip_range: "192.168.201.0/24"
+  mqtt-network:
+    driver: bridge
